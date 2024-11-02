@@ -1,0 +1,185 @@
+import numpy as np
+import random
+
+def createStop(num_decks):
+# This function provides a value for when the shoe is stopped and reshuffled
+# Takes a value from normal distribution between midpoint and end of entire shoe
+    # inputs:
+        # num_decks (int) - amount of decks to use
+    ## outputs:
+        # (int) - number for card to stop at'
+
+    a = (num_decks * 52 / 2)  # midpoint bound
+    b = (num_decks * 52 / 2) + (num_decks * 52 / 4)  # upper bound
+
+    # Step 2: Calculate the mean and standard deviation
+    mean = (a + b) / 2  # Midpoint
+    std_dev = (b - a) / 6  # Standard deviation; adjust as needed
+
+    # Step 3: Generate random numbers with a normal distribution
+    data = np.random.normal(mean, std_dev, 1)
+    
+    maxIndex = num_decks * 52 - 20 # 20 is value determined by min amount of cards to play last hand
+    return_value = int(data[0]) # number to return
+    
+    while return_value >= maxIndex:
+        # step incase the cut is too deep (not enough cards)
+        # Recursive
+        return_value = createStop(num_decks)
+    
+    return return_value
+
+def createShoe(num_decks):
+# This function makes a list of all the cards based on how many decks to shuffle
+    # inputs:
+        # num_decks (int) - amount of decks to use
+    ## outputs:
+        # (list) - combination of shuffled cards in the shoe
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    values = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, [1, 11]]
+    suits = ['♠', '♣', '♦', '♥']
+    deck = [f'[{r}{s}]' for r in ranks for s in suits]
+    decks = deck * num_decks
+    random.shuffle(decks)
+    
+    return decks
+
+def printUpdatedBalance(amt_to_change):
+# This function prints the balance and what happened in the correct format
+    # inputs:
+        # amt_to_change (float) - value that will change the balance
+    # outputs:
+        # A formatted print of the balance and the effect while also changing the global variable
+    global balance
+    
+    print(f'Old Balance: ${balance} + ${amt_to_change}')
+    balance += amt_to_change
+    print(f'New Balance: ${balance}')
+    print()
+
+
+
+card_Values = {
+    '1': 10,
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,
+    '7': 7,
+    '8': 8,
+    '9': 9,
+    'J': 10,
+    'Q': 10,
+    'K': 10,
+    'A': [11, 1]
+}
+
+num_decks = 6
+max_hands = 4
+num_hands_to_play = 30000
+
+hands = 0 # index to point at how many hands of black jack were played
+stopIndex = createStop(num_decks)
+balance = 100
+bet = 1
+dealer_hand = []
+player_hand = []
+shoe = createShoe(num_decks)
+
+while hands < num_hands_to_play:
+    index = 0 # index to point at which card in the list of shoe
+    
+    while index < stopIndex:
+        # until the cards hit the end of the stop part of the shoe
+        if hands == num_hands_to_play:
+            print('Max amount of hands to be played')
+            break
+                
+        while hands < num_hands_to_play:
+            # While game is going on
+            
+            dealer_hand.clear()
+            player_hand.clear()
+            # deals out 4 cards
+            dealer_hand = [shoe[index + 1], shoe[index + 3]]
+            player_hand = [[shoe[index], shoe[index + 2]]]
+            index += 4       
+
+            # For testing
+            #player_hand = [['[K♣]', '[A♠]']]
+            # For testing
+            
+            # Calculates dealer cards values
+            dealer_values = [card_Values[card[1:2]] for card in dealer_hand] # gets corresponding value for each card
+            normalized_dlist = [
+                card if isinstance(card, list) else [card, card]
+                for card in dealer_values
+            ] # makes it so if there's ace, have a hard and soft value
+            sumdhand = [sum(value) for value in zip(*normalized_dlist)] # sums up the hard and soft values
+            # Calculates player cards values
+            player_values = [card_Values[card[1:2]] for card in player_hand[0]] # gets corresponding value for each card
+            normalized_plist = [
+                card if isinstance(card, list) else [card, card]
+                for card in player_values
+            ] # makes it so if there's ace, have a hard and soft value
+            sumphand = [sum(value) for value in zip(*normalized_plist)] # sums up the hard and soft values
+
+            # Print inital hands
+            if dealer_hand[0][1:2] != 'A':
+                # When dealer not showing ace
+                print(f'Dealer: {dealer_hand[0]} \t \t \t ({dealer_values[0]})')
+            else:
+                # When dealer shows an ace
+                print(f'Dealer: {dealer_hand[0]} \t \t \t (11/1)')
+            if sumphand[0] == sumphand[1]:
+                # When there is no ace
+                print(f'Player: {player_hand[0][0]} {player_hand[0][1]} \t \t ({sumphand[0]})')
+            elif sumphand[0] == 21:
+                # Player Blackjack
+                print(f'Player: {player_hand[0][0]} {player_hand[0][1]} \t \t BLACKJACK!')
+            elif sumphand[0] <= 21:
+                # Player has at least one ace
+                print(f'Player: {player_hand[0][0]} {player_hand[0][1]} \t \t ({sumphand[0]})/({sumphand[1]})')
+            elif sumphand[0] > 21:
+                # Player has at 2 aces
+                print(f'Player: {player_hand[0][0]} {player_hand[0][1]} \t \t ({sumphand[1]})')
+            else:
+                print('ERROR CHECK')
+
+            if sumphand[0] == 21 and sumdhand[0] == 21:
+                # Checks if dealer has blackjack
+                print(f'\nDealer Reveal: {dealer_hand[0]} {dealer_hand[1]} \t PUSH!')
+                printUpdatedBalance(bet * 0)
+                break
+            elif sumdhand[0] != 21 and sumphand[0] == 21:
+                # Player Win
+                print(f'\nDealer Reveal: {dealer_hand[0]} {dealer_hand[1]} \t Player WIN!')
+                printUpdatedBalance(bet * (3 / 2))
+                break
+            elif sumdhand[0] == 21 and sumphand[0] != 21:
+                # Player Win
+                print(f'\nDealer Reveal: {dealer_hand[0]} {dealer_hand[1]} \t LOSE!')
+                printUpdatedBalance(-1)
+                break
+
+            p_actions = ['h', 's', 'd'] # possible player actions
+
+            # if dealer is showing Ace
+            if dealer_hand[0][1:2] == 'A':
+                # Dealer shows ace (Insurance)
+                p_actions.append('i')
+
+            if sumphand[0] == sumphand[1]:
+                # allows first split
+                p_actions.append('s')
+                
+            inputs = ''
+            #inputs = input(f'Possible Actions: {p_actions}\n')
+
+            print('')
+            hands += 1 # start increment of hands played
+                      
+    print(f'Hands Played {hands}')
+    if hands < num_hands_to_play:
+        print('Reshuffling Shoe\n')
