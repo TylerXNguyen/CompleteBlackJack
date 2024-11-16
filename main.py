@@ -1,3 +1,4 @@
+# pycharms python for work
 import numpy as np
 import random
 from IPython.display import clear_output
